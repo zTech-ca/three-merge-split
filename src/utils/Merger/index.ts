@@ -13,10 +13,64 @@ interface AttributesExtended extends AttributesFull {
   nextMaterialIndex: number | null;
 }
 
+interface MeshAndTransformationReferenceUuid {
+  mesh: THREE.Mesh;
+  transformationReferenceUuid?: string;
+}
+
 export class Merger {
   // Public methods available to users
 
   // High-level geometry manipulation tools
+
+  public static mergeMeshes(
+    meshData: THREE.Mesh[] | MeshAndTransformationReferenceUuid[],
+    center = false,
+    useGroups = true,
+    useIndex = true
+  ) {
+    if (!meshData.length) return null;
+
+    let mergedMesh: THREE.Mesh;
+    let meshes: THREE.Mesh[];
+
+    if (meshData[0] instanceof THREE.Mesh) {
+      meshes = meshData as THREE.Mesh[];
+      const mergedGeometry = this.merge(
+        meshes.map((mesh) => mesh.geometry.clone()),
+        useGroups,
+        useIndex
+      );
+      if (!mergedGeometry) return null;
+      mergedMesh = meshes[0].clone();
+      mergedMesh.geometry = mergedGeometry;
+    } else {
+      const data = meshData as MeshAndTransformationReferenceUuid[];
+      meshes = data.map((dat) => dat.mesh);
+      const geometries = data.map((dat) =>
+        ThreeUtils.applyTransforms(
+          dat.mesh.geometry.clone(),
+          dat.transformationReferenceUuid
+            ? ThreeUtils.getAncestralTransformations(
+                dat.mesh,
+                dat.transformationReferenceUuid
+              )
+            : []
+        )
+      );
+      const mergedGeometry = this.merge(geometries, useGroups, useIndex);
+      if (!mergedGeometry) return null;
+      mergedMesh = data[0].mesh.clone();
+      mergedMesh.geometry = mergedGeometry;
+    }
+    if (center) ThreeUtils.centerGeometryAndShiftMesh(mergedMesh);
+
+    mergedMesh.material = useGroups
+      ? this.sortMaterials(meshes)
+      : ThreeUtils.getFirstMaterial(meshes[0]);
+
+    return mergedMesh;
+  }
 
   // Basic geometry manipulation tools
 
@@ -52,25 +106,35 @@ export class Merger {
         let nextMaterialIndex: number | null = null;
         let localGroups: Group[] = [];
         if (useGroups) {
-          localGroups = attribute.groups.map((group) => {
-            const accCount = acc.index
-              ? acc.index.length
-              : acc.attributes[AttributeProperty.normal].count;
-            return {
-              ...group,
-              start: group.start + accCount,
-              materialIndex:
-                group.materialIndex === undefined
-                  ? undefined
-                  : group.materialIndex + acc.nextMaterialIndex!,
-            };
-          });
+          const accCount = acc.index
+            ? acc.index.length
+            : acc.attributes[AttributeProperty.normal].count;
+
+          if (attribute.groups.length)
+            localGroups = attribute.groups.map((group) => {
+              return {
+                ...group,
+                start: group.start + accCount,
+                materialIndex:
+                  group.materialIndex === undefined
+                    ? 0
+                    : group.materialIndex + acc.nextMaterialIndex!,
+              };
+            });
+          else
+            localGroups = [
+              {
+                start: accCount,
+                count: attribute.index
+                  ? attribute.index.length
+                  : attribute.attributes[AttributeProperty.normal].count,
+                materialIndex: acc.nextMaterialIndex!,
+              },
+            ];
 
           nextMaterialIndex =
             Math.max(
-              ...(localGroups
-                .filter((group) => group.materialIndex !== undefined)
-                .map((group) => group.materialIndex) as number[])
+              ...(localGroups.map((group) => group.materialIndex) as number[])
             ) + 1;
         }
 
@@ -216,5 +280,32 @@ export class Merger {
       array.push(...attribute.array.slice(ix, ix + attribute.itemSize));
     });
     return array;
+  }
+
+  private static sortMaterials(meshes: THREE.Mesh[]) {
+    return meshes.reduce((acc: THREE.Material[], mesh) => {
+      let pendingMaterials: THREE.Material[] = [];
+
+      if (mesh.geometry.groups.length) {
+        const highestMaterialIndex = Math.max(
+          ...(mesh.geometry.groups.map(
+            (group) => group.materialIndex || 0
+          ) as number[])
+        );
+
+        if (Array.isArray(mesh.material))
+          while (pendingMaterials.length < highestMaterialIndex + 1)
+            pendingMaterials.push(
+              mesh.material[pendingMaterials.length] ||
+                ThreeUtils.getFirstMaterial(mesh)
+            );
+        else
+          while (pendingMaterials.length < highestMaterialIndex + 1)
+            pendingMaterials.push(mesh.material);
+      } else {
+        pendingMaterials = [ThreeUtils.getFirstMaterial(mesh)];
+      }
+      return acc.concat(pendingMaterials);
+    }, []);
   }
 }

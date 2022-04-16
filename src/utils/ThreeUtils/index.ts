@@ -70,6 +70,32 @@ export class ThreeUtils {
     } else return Array.from(Array(length).keys());
   }
 
+  /**
+   * This simply returns the first material inside the mesh if material
+   * property is an array. Otherwise, it will return mesh's material.
+   * This could be useful in obtaining one default material.
+   * @param mesh that contains material to be extracted.
+   * @returns one material
+   */
+
+  public static getFirstMaterial(mesh: THREE.Mesh) {
+    return Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+  }
+
+  /**
+   * This clones and returns buffer geometry. In normal cloning by threejs
+   * library, any undefined materialIndex is turned into 0 upon conversion.
+   * This helps to retain the groups.
+   * @param geometry to be cloned
+   * @returns cloned buffer geometry
+   */
+
+  public static cloneBufferGeometry(geometry: THREE.BufferGeometry) {
+    const clone = geometry.clone();
+    clone.groups = geometry.groups;
+    return clone;
+  }
+
   // Public getters
 
   public static get attributeProperties() {
