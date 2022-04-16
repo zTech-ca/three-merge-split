@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { ThreeUtils } from "../index";
 
 enum AttributeProperty {
   normal = "normal",
@@ -21,6 +22,60 @@ interface Group {
 
 export class Splitter {
   // Public methods available to users
+
+  // High-level geometry manipulation tools
+
+  /**
+   * This splits the meshes. Each mesh shares the material contained in
+   * original mesh, and material property is not an array. Optionally,
+   * user can choose the center the geometry while placing the mesh back
+   * so that the global coordinates of vertices stay the same place. Also,
+   * the user may optionally apply transformations to geometry from based
+   * on transformations of ancestors.
+   * @param mesh of target
+   * @param center is a boolean indicating whether to center the geometry
+   * @param transformationReferenceUuid is the uuid of ancestor that has
+   * highest hierarchy, from where transformations of descendants should
+   * be accounted.
+   * @returns splitted meshes.
+   */
+
+  public static splitMesh(
+    mesh: THREE.Mesh,
+    center = false,
+    transformationReferenceUuid?: string
+  ) {
+    const geometries = this.split(mesh.geometry);
+    const transformations = transformationReferenceUuid
+      ? ThreeUtils.getAncestralTransformations(
+          mesh,
+          transformationReferenceUuid
+        )
+      : null;
+
+    return geometries.map((geometry, i) => {
+      const splittedMesh = mesh.clone();
+      splittedMesh.geometry = geometry;
+
+      if (transformations)
+        transformations.forEach((transformation) =>
+          geometry.applyMatrix4(transformation)
+        );
+
+      if (Array.isArray(mesh.material)) {
+        const materialIndex = mesh.geometry.groups[i].materialIndex;
+        if (materialIndex === undefined)
+          splittedMesh.material = mesh.material[0];
+        else splittedMesh.material = mesh.material[materialIndex];
+      }
+
+      if (center) ThreeUtils.centerGeometryAndShiftMesh(splittedMesh);
+
+      return splittedMesh;
+    });
+  }
+
+  // Basic geometry manipulation tools
 
   public static split(geometry: THREE.BufferGeometry): THREE.BufferGeometry[] {
     const groups = geometry.groups;
@@ -118,22 +173,20 @@ export class Splitter {
 
     const geometry = new THREE.BufferGeometry();
 
-    (Object.keys(AttributeProperty) as AttributeProperty[]).forEach(
-      (property) => {
-        const itemSize = attributes[property].itemSize;
-        const array = attributes[property].array;
-        const vertices = new Float32Array(
-          array.slice(
-            group.start * itemSize,
-            (group.start + group.count) * itemSize
-          )
-        );
-        geometry.setAttribute(
-          property,
-          new THREE.BufferAttribute(vertices, itemSize)
-        );
-      }
-    );
+    this.attributeProperties.forEach((property) => {
+      const itemSize = attributes[property].itemSize;
+      const array = attributes[property].array;
+      const vertices = new Float32Array(
+        array.slice(
+          group.start * itemSize,
+          (group.start + group.count) * itemSize
+        )
+      );
+      geometry.setAttribute(
+        property,
+        new THREE.BufferAttribute(vertices, itemSize)
+      );
+    });
 
     return geometry;
   }
@@ -149,28 +202,30 @@ export class Splitter {
       geometry.setIndex(geoIndex);
     }
 
-    (Object.keys(AttributeProperty) as AttributeProperty[]).forEach(
-      (property) => {
-        const itemSize = attributes[property].itemSize;
-        const array = attributes[property].array;
-        const vertices = new Float32Array(uniqueIndex.length * itemSize);
+    this.attributeProperties.forEach((property) => {
+      const itemSize = attributes[property].itemSize;
+      const array = attributes[property].array;
+      const vertices = new Float32Array(uniqueIndex.length * itemSize);
 
-        for (
-          let i = 0, attrIndex = 0;
-          i < uniqueIndex.length;
-          i++, attrIndex += itemSize
-        ) {
-          const startingIndex = uniqueIndex[i] * itemSize;
-          const arr = array.slice(startingIndex, startingIndex + itemSize);
-          vertices.set(arr, attrIndex);
-        }
-        geometry.setAttribute(
-          property,
-          new THREE.BufferAttribute(vertices, itemSize)
-        );
+      for (
+        let i = 0, attrIndex = 0;
+        i < uniqueIndex.length;
+        i++, attrIndex += itemSize
+      ) {
+        const startingIndex = uniqueIndex[i] * itemSize;
+        const arr = array.slice(startingIndex, startingIndex + itemSize);
+        vertices.set(arr, attrIndex);
       }
-    );
+      geometry.setAttribute(
+        property,
+        new THREE.BufferAttribute(vertices, itemSize)
+      );
+    });
 
     return geometry;
+  }
+
+  private static get attributeProperties() {
+    return Object.keys(AttributeProperty) as AttributeProperty[];
   }
 }
