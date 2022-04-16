@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useMemo } from "react";
-import { CanvasManager, Splitter, ThreeUtils } from "./utils";
+import { CanvasManager, Merger, Splitter, ThreeUtils } from "./utils";
 import * as THREE from "three";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 
@@ -149,6 +149,104 @@ function App() {
         mesh4.material = mat;
 
         canvasManager.add(mesh4);
+
+        // ---------- merged chair:
+        const mat3 = new THREE.MeshPhongMaterial({
+          color: 0xff0000,
+          shininess: 100,
+          side: THREE.DoubleSide,
+        });
+        const mat4 = new THREE.MeshPhongMaterial({
+          color: 0x00ff00,
+          shininess: 100,
+          side: THREE.DoubleSide,
+        });
+        const mat5 = new THREE.MeshPhongMaterial({
+          color: 0x0000ff,
+          shininess: 100,
+          side: THREE.DoubleSide,
+        });
+        const mat6 = new THREE.MeshPhongMaterial({
+          color: 0xffff00,
+          shininess: 100,
+          side: THREE.DoubleSide,
+        });
+        const mat7 = new THREE.MeshPhongMaterial({
+          color: 0xff00ff,
+          shininess: 100,
+          side: THREE.DoubleSide,
+        });
+        const mat8 = new THREE.MeshPhongMaterial({
+          color: 0x00ffff,
+          shininess: 100,
+          side: THREE.DoubleSide,
+        });
+
+        // mesh.geometry.deleteAttribute("uv");
+        // chairMesh.geometry.deleteAttribute("uv");
+
+        const merged =
+          Merger.merge(
+            [
+              mesh.geometry,
+              chairMesh.geometry,
+              mesh.geometry
+                .clone()
+                .rotateX(Math.PI / 4)
+                .translate(2, 0, 0),
+            ],
+            true,
+            true
+          ) || new THREE.BufferGeometry();
+
+        console.log("show merged: ", merged);
+
+        const mesh6 = new THREE.Mesh(merged, [
+          mat3,
+          mat4,
+          mat5,
+          mat6,
+          mat7,
+          mat8,
+          mat3,
+          mat4,
+          mat5,
+          mat6,
+          mat7,
+          mat8,
+          mat3,
+          mat4,
+          mat5,
+          mat6,
+          mat7,
+          mat8,
+        ]);
+
+        // const mesh6 = new THREE.Mesh(merged, mat5);
+
+        mesh6.translateY(2);
+
+        canvasManager.add(mesh6);
+
+        // -------------------------------------
+
+        const geo2 = new THREE.BoxGeometry();
+        const mesh7 = new THREE.Mesh(geo2, [
+          mat3,
+          mat4,
+          mat5,
+          mat6,
+          mat7,
+          mat8,
+        ]);
+
+        mesh7.translateX(-2);
+
+        geo2.groups[2].materialIndex = undefined;
+
+        console.log("group: ", geo2.groups);
+
+        canvasManager.add(mesh7);
       },
       (progress) => {
         // console.log("error has happened", e);
