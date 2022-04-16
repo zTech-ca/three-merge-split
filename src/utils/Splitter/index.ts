@@ -1,24 +1,6 @@
 import * as THREE from "three";
 import { ThreeUtils } from "../index";
-
-enum AttributeProperty {
-  normal = "normal",
-  position = "position",
-  uv = "uv",
-}
-
-interface Attribute {
-  array: number[];
-  itemSize: number;
-}
-
-type Attributes = Record<AttributeProperty, Attribute>;
-
-interface Group {
-  start: number;
-  count: number;
-  materialIndex?: number;
-}
+import { Attributes, Group } from "../../types";
 
 export class Splitter {
   // Public methods available to users
@@ -51,16 +33,13 @@ export class Splitter {
           mesh,
           transformationReferenceUuid
         )
-      : null;
+      : [];
 
     return geometries.map((geometry, i) => {
       const splittedMesh = mesh.clone();
       splittedMesh.geometry = geometry;
 
-      if (transformations)
-        transformations.forEach((transformation) =>
-          geometry.applyMatrix4(transformation)
-        );
+      ThreeUtils.applyTransforms(geometry, transformations);
 
       if (Array.isArray(mesh.material)) {
         const materialIndex = mesh.geometry.groups[i].materialIndex;
@@ -130,9 +109,9 @@ export class Splitter {
       groupIndexes.reduce(
         (acc: number[], groupIndex: number) =>
           acc.concat(
-            Array.from(
-              { length: groups[groupIndex].count },
-              (_, i) => i + groups[groupIndex].start
+            ThreeUtils.getSortedIntegers(
+              groups[groupIndex].count,
+              groups[groupIndex].start
             )
           ),
         []
@@ -142,22 +121,16 @@ export class Splitter {
 
   // Private methods
 
-  private static getAttributes(geometry: THREE.BufferGeometry): Attributes {
-    const attributes = geometry.attributes;
-    return {
-      normal: {
-        array: Array.from(attributes.normal.array),
-        itemSize: attributes.normal.itemSize,
-      },
-      position: {
-        array: Array.from(attributes.position.array),
-        itemSize: attributes.position.itemSize,
-      },
-      uv: {
-        array: Array.from(attributes.uv.array),
-        itemSize: attributes.uv.itemSize,
-      },
-    };
+  private static getAttributes(geometry: THREE.BufferGeometry) {
+    return Object.fromEntries(
+      ThreeUtils.attributeProperties.map((property) => [
+        property,
+        {
+          array: Array.from(geometry.attributes[property].array),
+          itemSize: geometry.attributes[property].itemSize,
+        },
+      ])
+    ) as Attributes;
   }
 
   private static assemble(
@@ -173,7 +146,7 @@ export class Splitter {
 
     const geometry = new THREE.BufferGeometry();
 
-    this.attributeProperties.forEach((property) => {
+    ThreeUtils.attributeProperties.forEach((property) => {
       const itemSize = attributes[property].itemSize;
       const array = attributes[property].array;
       const vertices = new Float32Array(
@@ -202,7 +175,7 @@ export class Splitter {
       geometry.setIndex(geoIndex);
     }
 
-    this.attributeProperties.forEach((property) => {
+    ThreeUtils.attributeProperties.forEach((property) => {
       const itemSize = attributes[property].itemSize;
       const array = attributes[property].array;
       const vertices = new Float32Array(uniqueIndex.length * itemSize);
@@ -223,9 +196,5 @@ export class Splitter {
     });
 
     return geometry;
-  }
-
-  private static get attributeProperties() {
-    return Object.keys(AttributeProperty) as AttributeProperty[];
   }
 }

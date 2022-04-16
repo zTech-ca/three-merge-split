@@ -1,3 +1,4 @@
 export * from "./CanvasManager";
-export * from "./Splitter";
 export * from "./ThreeUtils";
+export * from "./Splitter";
+export * from "./Merger";
