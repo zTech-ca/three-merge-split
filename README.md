@@ -27,17 +27,17 @@ For demo purpose, consider the following geometries and mesh.
 const box1 = new THREE.BoxGeometry();
 const box2 = new THREE.BoxGeometry();
 
-const mesh = new THREE.Mesh(box2, undefined);
+const mesh = new THREE.Mesh(box2);
 ```
 
 Note that box1's groups property is an array of 6 groups, each of which represents the corresponding face, like following (three@0.139.2):
 
-> {start: 0, count: 6, materialIndex: 0}
-> {start: 6, count: 6, materialIndex: 1}
-> {start: 12, count: 6, materialIndex: 2}
-> {start: 18, count: 6, materialIndex: 3}
-> {start: 24, count: 6, materialIndex: 4}
-> {start: 30, count: 6, materialIndex: 5}
+> {start: 0, count: 6, materialIndex: 0}<br />
+> {start: 6, count: 6, materialIndex: 1}<br />
+> {start: 12, count: 6, materialIndex: 2}<br />
+> {start: 18, count: 6, materialIndex: 3}<br />
+> {start: 24, count: 6, materialIndex: 4}<br />
+> {start: 30, count: 6, materialIndex: 5}<br />
 
 After the splitter class is created, the users have access to following public functionalities.
 
@@ -107,13 +107,43 @@ The users have access to the following functionalities.
 ##### Merge the geometries
 
 ```javascript
+/**
+ * This merges all of the geometries passed in as an array. Optionally, user may
+ * choose to create groups within the merged geometries, where each of the group
+ * in each geometry is combined. Any geometry without group will have that entire
+ * geometry portion as one group. Users may also choose to use index if any of the
+ * passed geometry has 2 or more same indices.
+ * @param geometries to be merged.
+ * @param useGroups is true if users wish to generate groups in the merged geometry.
+ * @param useIndex is true if users wish to keep all of the indices in geometries if
+ * relevant.
+ * @returns merged geometry.
+ */
 const geometry = merger.merge([box1, box2, box3], true, true);
 ```
 
 ##### Merge the meshes
 
 ```javascript
-const geometry = merger.merge([mesh1, mesh2, mesh3], true, true, true);
+/**
+ * This merges all of the meshes passed in as an array. Optionally, users may
+ * center the geometry while keeping the relative global position of geometries, and
+ * choose to create groups within the merged geometries, where each of the group
+ * in each geometry is combined. Any geometry without group will have that entire
+ * geometry portion as one group. Users may also choose to use index if any of the
+ * passed geometry has 2 or more same indices.
+ * @param meshData is either an array of mesh or an array of
+ * MeshAndTransformationReferenceUuid, which has 2 properties: the mesh and
+ * transformationReferenceUuid, which is the uuid of one of ancestors of the mesh.
+ * Using this ancestor, the geometry is shifted based on all of the transformations
+ * down to the mesh's hierarchy.
+ * @param center is true if users choose to center
+ * @param useGroups is true if users wish to generate groups in the merged geometry.
+ * @param useIndex is true if users wish to keep all of the indices in geometries if
+ * relevant.
+ * @returns merged mesh.
+ */
+const geometry = merger.mergeMeshes([mesh1, mesh2, mesh3], true, true, true);
 ```
 
 ## For contributors

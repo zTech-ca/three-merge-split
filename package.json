@@ -1,6 +1,6 @@
 {
   "name": "three-merge-split",
-  "version": "1.0.20",
+  "version": "1.0.22",
   "description": "Helps to merge and split the geometries and meshes of three.js",
   "main": "build/index.js",
   "types": "build",

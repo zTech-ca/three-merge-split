@@ -45,6 +45,25 @@ export class Merger {
 
   // High-level geometry manipulation tools
 
+  /**
+   * This merges all of the meshes passed in as an array. Optionally, users may
+   * center the geometry while keeping the relative global position of geometries, and
+   * choose to create groups within the merged geometries, where each of the group
+   * in each geometry is combined. Any geometry without group will have that entire
+   * geometry portion as one group. Users may also choose to use index if any of the
+   * passed geometry has 2 or more same indices.
+   * @param meshData is either an array of mesh or an array of
+   * MeshAndTransformationReferenceUuid, which has 2 properties: the mesh and
+   * transformationReferenceUuid, which is the uuid of one of ancestors of the mesh.
+   * Using this ancestor, the geometry is shifted based on all of the transformations
+   * down to the mesh's hierarchy.
+   * @param center is true if users choose to center
+   * @param useGroups is true if users wish to generate groups in the merged geometry.
+   * @param useIndex is true if users wish to keep all of the indices in geometries if
+   * relevant.
+   * @returns merged mesh.
+   */
+
   public mergeMeshes(
     meshData: THREE.Mesh[] | MeshAndTransformationReferenceUuid[],
     center = false,
@@ -95,6 +114,19 @@ export class Merger {
   }
 
   // Basic geometry manipulation tools
+
+  /**
+   * This merges all of the geometries passed in as an array. Optionally, user may
+   * choose to create groups within the merged geometries, where each of the group
+   * in each geometry is combined. Any geometry without group will have that entire
+   * geometry portion as one group. Users may also choose to use index if any of the
+   * passed geometry has 2 or more same indices.
+   * @param geometries to be merged.
+   * @param useGroups is true if users wish to generate groups in the merged geometry.
+   * @param useIndex is true if users wish to keep all of the indices in geometries if
+   * relevant.
+   * @returns merged geometry.
+   */
 
   public merge(
     geometries: THREE.BufferGeometry[],
